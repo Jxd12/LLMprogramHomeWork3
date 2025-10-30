@@ -1,38 +1,25 @@
-# vue-project
+一、说明：
 
-This template should help get you started developing with Vue 3 in Vite.
+软件旨在简化旅行规划过程，通过 AI 了解用户需求，自动生成详细的旅行路线和建议，并提供实时旅行辅助。
 
-## Recommended IDE Setup
+二、核心功能：
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+1、智能行程规划: 用户可以通过语音（或文字，语音功能一定要有）输入旅行目的地、日期、预算、同行人数、旅行偏好（例如：“我想去日本，5 天，预算 1 万元，喜欢美食和动漫，带孩子”），AI 会自动生成个性化的旅行路线，包括交通、住宿、景点、餐厅等详细信息。
 
-## Recommended Browser Setup
+2、费用预算与管理: 由 AI 进行预算分析，记录旅行开销（推荐可以使用语音）。
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+3、用户管理与数据存储:
 
-## Customize configuration
+注册登录系统: 用户可以保存和管理多份旅行计划。
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+云端行程同步: 旅行计划、偏好设置、费用记录等数据云端同步，方便多设备查看和修改。
 
-## Project Setup
 
-```sh
-npm install
-```
 
-### Compile and Hot-Reload for Development
+三、技术栈（ Web）:
 
-```sh
-npm run dev
-```
+语音识别：基于科大讯飞语音识别 API 提供语音识别功能
 
-### Compile and Minify for Production
+数据库/认证： postgresql
 
-```sh
-npm run build
-```
+行程规划和费用预算：使用qwen-plus大模型进行行程规划
