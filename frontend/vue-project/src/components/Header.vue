@@ -26,7 +26,7 @@ const handleLogin = () => {
 
 const handleLogout = () => {
   userStore.logout()
-  router.push('/')
+  router.push('/login')
 }
 </script>
 

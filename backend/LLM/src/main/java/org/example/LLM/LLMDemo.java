@@ -1,4 +1,4 @@
-package org.example;
+package org.example.LLM;
 
 import java.util.Arrays;
 import java.lang.System;

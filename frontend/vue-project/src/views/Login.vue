@@ -91,7 +91,7 @@ const handleLogin = async () => {
     await userStore.login(form)
     // 显示成功消息
     alert('登录成功')
-    router.push('/dashboard')
+    router.push('/')
   } catch (error) {
     // 显示错误消息
     alert(error.message)
@@ -112,7 +112,7 @@ const handleRegister = async () => {
     // 显示成功消息
     alert('注册成功')
     // 注册成功后自动登录并跳转
-    router.push('/dashboard')
+    router.push('/')
   } catch (error) {
     // 显示错误消息
     alert(error.message)

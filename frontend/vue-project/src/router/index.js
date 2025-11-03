@@ -25,7 +25,7 @@ router.beforeEach((to, from, next) => {
         next('/login')
     } else if (to.path === '/login' && userStore.isLoggedIn) {
         // 已登录用户访问登录页，重定向到仪表板
-        next('/dashboard')
+        next('/')
     } else {
         // 其他情况允许访问
         next()
