@@ -62,10 +62,35 @@ public class TravelPlanServiceImpl implements TravelPlanService {
     @Override
     @Transactional
     public TravelPlanDTO createTravelPlan(TravelPlanDTO travelPlanDTO) {
+        // 转换并保存旅行计划主体
         TravelPlan travelPlan = DTOConverter.convertToTravelPlan(travelPlanDTO);
-        travelPlan.setCreatedAt(LocalDateTime.now());
-        travelPlan.setUpdatedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        travelPlan.setCreatedAt(now);
+        travelPlan.setUpdatedAt(now);
         TravelPlan savedTravelPlan = travelPlanRepository.save(travelPlan);
+
+        // 处理关联的每日行程和活动
+        if (travelPlanDTO.getDailyItineraries() != null) {
+            for (DailyItineraryDTO itineraryDTO : travelPlanDTO.getDailyItineraries()) {
+                // 创建每日行程
+                DailyItinerary dailyItinerary = DTOConverter.convertToDailyItinerary(itineraryDTO);
+                dailyItinerary.setTravelPlan(savedTravelPlan);
+                dailyItinerary.setCreatedAt(now);
+                DailyItinerary savedItinerary = dailyItineraryRepository.save(dailyItinerary);
+
+                // 处理关联的活动
+                if (itineraryDTO.getActivities() != null) {
+                    for (ActivityDTO activityDTO : itineraryDTO.getActivities()) {
+                        Activity activity = DTOConverter.convertToActivity(activityDTO);
+                        activity.setDailyItinerary(savedItinerary);
+                        activity.setCreatedAt(now);
+                        activityRepository.save(activity);
+                    }
+                }
+            }
+        }
+
+        // 返回完整的旅行计划DTO（包含所有关联数据）
         return DTOConverter.convertToTravelPlanDTO(savedTravelPlan);
     }
 

@@ -19,7 +19,7 @@
             <button @click="startSpeechRecognition" :disabled="isListening" v-if="isSpeechSupported">
               {{ isListening ? 'Listening...' : '🎤 语音输入' }}
             </button>
-            <button @click="handlePromptSubmit">生成行程</button>
+            <button @click="handlePromptSubmit">提取信息</button>
           </div>
         </div>
       </div>
@@ -63,21 +63,44 @@
         </div>
         <div class="modal-actions">
           <button @click="cancelGenerate" class="cancel-btn">取消</button>
-          <button @click="confirmGenerate" class="confirm-btn">确认生成</button>
+          <button @click="confirmGenerate" class="confirm-btn">开始生成</button>
         </div>
       </div>
     </div>
+
+    <div v-if="showLoadingModal" class="modal-overlay">
+      <div class="modal-content loading-modal">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <h3>正在生成旅行计划...</h3>
+          <p>AI正在为您精心规划行程，需要较长时间,请稍候</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 旅行计划详情弹窗 -->
+    <TravelPlanModal
+        v-model:visible="showTravelPlanModal"
+        :plan="finalTravelPlan"
+        @save="handleSaveItinerary"
+        @day-select="handleDaySelect"
+    />
   </div>
 </template>
 
-<script setup>import { ref, reactive, onMounted } from 'vue'
+<script setup>import {onMounted, reactive, ref} from 'vue'
 import llmApi from '../api/LLMApi.js'
+import TravelPlanModal from '@/components/TravelPlanModal.vue'
+import travelPlanApi from "@/api/travelPlanApi.js";
+import { useUserStore } from '@/stores/user.js'
+import { useRouter } from 'vue-router'
 
 const userPrompt = ref('')
 const isListening = ref(false)
 const isSpeechSupported = ref(false)
 const showConfirmModal = ref(false)
 const parsedTravelData = ref(null)
+const router = useRouter()
 // 可编辑的旅行数据
 const editableTravelData = reactive({
   destination: '',
@@ -89,6 +112,8 @@ const editableTravelData = reactive({
 
 let recognition = null
 let existingContent = ''
+
+const showLoadingModal = ref(false)
 
 // 检查浏览器是否支持语音识别
 onMounted(() => {
@@ -199,14 +224,83 @@ const handlePromptSubmit = async () => {
   }
 }
 
-const confirmGenerate = () => {
-  showConfirmModal.value = false;
-  alert(`已确认，正在为您生成行程...\n目的地: ${editableTravelData.destination}\n日期: ${editableTravelData.duration}\n预算: ${editableTravelData.budget}\n同行人数: ${editableTravelData.companions}\n旅行偏好: ${editableTravelData.preferences}`);
-  // 这里可以继续调用生成行程的API
+const showTravelPlanModal = ref(false)
+const finalTravelPlan = ref(null)
+
+const confirmGenerate = async () => {
+  showConfirmModal.value = false
+  showLoadingModal.value = true // 显示加载模态框
+
+  try {
+    // 调用后端API获取完整旅行计划
+    const travelData = {
+      destination: editableTravelData.destination,
+      duration: editableTravelData.duration,
+      budget: editableTravelData.budget,
+      companions: editableTravelData.companions,
+      preferences: editableTravelData.preferences
+    }
+
+    const response = await llmApi.post('/api/llm/travel-plan-final', travelData)
+    finalTravelPlan.value = response.data
+    console.log('完整旅行计划:', finalTravelPlan.value)
+
+    showTravelPlanModal.value = true
+    showLoadingModal.value = false // 隐藏加载模态框
+  } catch (error) {
+    console.error('生成行程失败:', error)
+    alert(`生成行程失败: ${error.message}`)
+    showLoadingModal.value = false // 隐藏加载模态框
+  }
 }
 
 const cancelGenerate = () => {
   showConfirmModal.value = false;
+}
+
+// 保存行程变更的处理函数
+const handleSaveItinerary = async (updatedData) => {
+  console.log('保存行程更新:', updatedData)
+
+  try {
+    // 获取当前用户信息
+    const userStore = useUserStore()
+    const userId = userStore.user?.id
+
+    if (!userId) {
+      alert('请先登录以保存行程')
+      return
+    }
+
+    // 创建新的旅行计划对象，包含userId
+    const newTravelPlan = {
+      ...finalTravelPlan.value,
+      userId: userId, // 添加userId字段
+      dailyItineraries: finalTravelPlan.value.dailyItineraries.map((itinerary, index) => {
+        if (index === updatedData.dayIndex) {
+          return updatedData.updatedItinerary
+        }
+        return itinerary
+      })
+    }
+
+    // 调用后端API创建新的旅行计划
+    const response = await travelPlanApi.post('/api/travel-plans', newTravelPlan)
+
+    // 更新本地数据为新创建的计划
+    finalTravelPlan.value = response.data
+
+    alert('行程已创建成功！')
+    router.push('/dashboard')
+  } catch (error) {
+    console.error('创建失败:', error)
+    alert('创建失败，请稍后重试')
+  }
+}
+
+// 日程切换的处理函数
+const handleDaySelect = (dayIndex) => {
+  console.log('切换到第', dayIndex + 1, '天')
 }
 </script>
 
@@ -362,5 +456,37 @@ const cancelGenerate = () => {
 
 .confirm-btn:hover {
   background-color: #359c6d;
+}
+.loading-modal {
+  text-align: center;
+}
+
+.loading-content {
+  padding: 30px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #42b983;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-modal h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.loading-modal p {
+  margin: 0;
+  color: #666;
 }
 </style>
