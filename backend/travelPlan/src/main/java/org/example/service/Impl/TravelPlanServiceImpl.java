@@ -73,12 +73,39 @@ public class TravelPlanServiceImpl implements TravelPlanService {
     @Transactional
     public TravelPlanDTO updateTravelPlan(Long id, TravelPlanDTO travelPlanDTO) {
         return travelPlanRepository.findById(id).map(existingPlan -> {
+            // 更新旅行计划基本信息
             existingPlan.setDestination(travelPlanDTO.getDestination());
             existingPlan.setDuration(travelPlanDTO.getDuration());
             existingPlan.setBudget(travelPlanDTO.getBudget());
             existingPlan.setCompanions(travelPlanDTO.getCompanions());
             existingPlan.setPreferences(travelPlanDTO.getPreferences());
             existingPlan.setUpdatedAt(LocalDateTime.now());
+
+            // 处理关联的每日行程和活动
+            if (travelPlanDTO.getDailyItineraries() != null) {
+                // 清理现有的每日行程（级联删除会自动删除关联的活动）
+                existingPlan.getDailyItineraries().clear();
+                dailyItineraryRepository.flush(); // 确保清理操作立即执行
+
+                // 添加新的每日行程
+                for (DailyItineraryDTO itineraryDTO : travelPlanDTO.getDailyItineraries()) {
+                    DailyItinerary newItinerary = DTOConverter.convertToDailyItinerary(itineraryDTO);
+                    newItinerary.setTravelPlan(existingPlan);
+                    newItinerary.setCreatedAt(LocalDateTime.now());
+                    DailyItinerary savedItinerary = dailyItineraryRepository.save(newItinerary);
+
+                    // 处理关联的活动
+                    if (itineraryDTO.getActivities() != null) {
+                        for (ActivityDTO activityDTO : itineraryDTO.getActivities()) {
+                            Activity newActivity = DTOConverter.convertToActivity(activityDTO);
+                            newActivity.setDailyItinerary(savedItinerary);
+                            newActivity.setCreatedAt(LocalDateTime.now());
+                            activityRepository.save(newActivity);
+                        }
+                    }
+                }
+            }
+
             TravelPlan updatedTravelPlan = travelPlanRepository.save(existingPlan);
             return DTOConverter.convertToTravelPlanDTO(updatedTravelPlan);
         }).orElse(null);

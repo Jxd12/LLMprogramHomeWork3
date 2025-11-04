@@ -275,24 +275,40 @@ watch(currentDayIndex, () => {
 const initializeEditableData = () => {
   if (selectedDay.value) {
     const day = selectedDay.value
+
+    // 初始化住宿信息
     editableItinerary.accommodation = {
-      place: day.accommodationPlace,
-      budget: day.accommodationBudget,
-      content: day.accommodationContent
+      place: day.accommodationPlace || '',
+      budget: day.accommodationBudget || '',
+      content: day.accommodationContent || ''
     }
-    const activities = day.activities
+
+    // 初始化活动信息
+    const activities = day.activities || []
     const activityKeys = ['breakfast', 'morning', 'lunch', 'afternoon', 'dinner', 'evening']
-    for (let i = 0; i < activities.length; i++){
-      editableItinerary[activityKeys[i]] = activities[i]
-    }
-    console.log('selectedDay', day)
-    // 直接映射数据到可编辑对象，不使用嵌套访问
-    Object.keys(editableItinerary).forEach(key => {
-      if (day[key]) {
-        // 假设 day[key] 是一个包含 place, budget, content, transport 的对象
-        editableItinerary[key] = { ...editableItinerary[key], ...day[key] }
+
+    // 为每个活动类型设置默认空值
+    activityKeys.forEach(key => {
+      editableItinerary[key] = {
+        place: '',
+        budget: '',
+        content: '',
+        transport: ''
       }
     })
+
+    // 根据实际活动数据填充
+    for (let i = 0; i < activities.length && i < activityKeys.length; i++) {
+      const key = activities[i].activityType
+      editableItinerary[key] = {
+        place: activities[i].place || '',
+        budget: activities[i].budget || '',
+        content: activities[i].content || '',
+        transport: activities[i].transport || ''
+      }
+    }
+
+    console.log('Initialized editableItinerary:', editableItinerary)
   }
 }
 
@@ -307,15 +323,43 @@ const closeModal = () => {
 }
 
 // 保存更改
-const saveChanges = () => {
-  const updatedItinerary = {
-    ...props.plan.dailyItineraries[currentDayIndex.value],
-    ...editableItinerary
-  }
+const saveChanges = async () => {
+  // 获取当前的dailyItinerary数据
+  const currentDailyItinerary = props.plan.dailyItineraries[currentDayIndex.value];
+
+  // 创建新的activities数组，通过activityType正确匹配并更新编辑的值
+  const updatedActivities = currentDailyItinerary.activities.map((activity) => {
+    const activityType = activity.activityType;
+
+    // 确保editableItinerary中有对应的活动类型数据
+    if (activityType && editableItinerary[activityType]) {
+      return {
+        ...activity,
+        place: editableItinerary[activityType].place,
+        budget: editableItinerary[activityType].budget,
+        content: editableItinerary[activityType].content,
+        transport: editableItinerary[activityType].transport
+      };
+    }
+    // 如果没有匹配的活动类型，返回原始活动数据
+    return activity;
+  });
+
+  // 构造更新后的dailyItinerary对象
+  const updatedDailyItinerary = {
+    ...currentDailyItinerary,
+    accommodationPlace: editableItinerary.accommodation.place,
+    accommodationBudget: editableItinerary.accommodation.budget,
+    accommodationContent: editableItinerary.accommodation.content,
+    activities: updatedActivities
+  };
+
+  console.log('Updated dailyItinerary:', updatedDailyItinerary);
+
   emit('save', {
     dayIndex: currentDayIndex.value,
-    updatedItinerary
-  })
+    updatedItinerary: updatedDailyItinerary
+  });
 }
 </script>
 

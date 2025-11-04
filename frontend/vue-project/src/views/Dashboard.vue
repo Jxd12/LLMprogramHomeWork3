@@ -45,10 +45,6 @@
         <p class="stat-value">{{ travelPlans.length }}</p>
       </div>
       <div class="stat-card">
-        <h3>总预算</h3>
-        <p class="stat-value">¥{{ totalBudget }}</p>
-      </div>
-      <div class="stat-card">
         <h3>目的地</h3>
         <p class="stat-value">{{ uniqueDestinations }}</p>
       </div>
@@ -77,14 +73,6 @@ const travelPlans = ref([])
 const showDetailModal = ref(false)
 const selectedPlan = ref(null)
 
-// 计算总预算
-const totalBudget = computed(() => {
-  return travelPlans.value.reduce((total, plan) => {
-    const budgetValue = parseFloat(plan.budget) || 0;
-    return total + budgetValue;
-  }, 0);
-})
-
 // 计算不同目的地数量
 const uniqueDestinations = computed(() => {
   const destinations = travelPlans.value.map(plan => plan.destination)
@@ -93,7 +81,7 @@ const uniqueDestinations = computed(() => {
 
 // 显示计划详情
 const showPlanDetails = (plan) => {
-  selectedPlan.value = plan
+  selectedPlan.value = { ...plan }
   showDetailModal.value = true
 }
 
@@ -107,11 +95,8 @@ const handleSaveChanges = async ({ dayIndex, updatedItinerary }) => {
       // 调用后端API更新整个旅行计划
       const response = await travelPlanApi.put(`/api/travel-plans/${selectedPlan.value.id}`, selectedPlan.value)
 
-      // 更新本地数据
-      const planIndex = travelPlans.value.findIndex(plan => plan.id === selectedPlan.value.id)
-      if (planIndex !== -1) {
-        travelPlans.value[planIndex] = response.data
-      }
+      // 重新从后端获取旅行计划信息
+      await fetchUserTravelPlans()
 
       alert('行程已保存成功！')
     } catch (error) {
