@@ -43,7 +43,7 @@
               <td><input v-model="editableTravelData.destination" class="data-input" /></td>
             </tr>
             <tr>
-              <td>日期</td>
+              <td>天数</td>
               <td><input v-model="editableTravelData.duration" class="data-input" /></td>
             </tr>
             <tr>
@@ -127,17 +127,38 @@ const startSpeechRecognition = () => {
   }
 }
 
-// 使用LLM API调用
+// 修改 sendPromptToBackend 函数以处理后端错误
 const sendPromptToBackend = async (prompt) => {
   try {
     const response = await llmApi.post('/api/llm/travel-plan', { prompt })
+
+    // 检查后端是否返回了业务错误
+    if (response.data && response.data.success === false) {
+      throw new Error(response.data.message || '后端处理失败')
+    }
+
     return response.data
   } catch (error) {
-    console.error('API请求失败:', error)
-    throw error
+    // 处理网络错误或HTTP错误
+    if (error.response) {
+      // 后端返回了错误响应
+      const errorData = error.response.data
+      if (errorData && errorData.message) {
+        throw new Error(errorData.message)
+      } else {
+        throw new Error(`请求失败: ${error.response.status} ${error.response.statusText}`)
+      }
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      throw new Error('网络连接失败，请检查服务器是否正常运行')
+    } else {
+      // 其他错误
+      throw new Error(error.message || '未知错误')
+    }
   }
 }
 
+// 修改 handlePromptSubmit 函数以显示更友好的错误信息
 const handlePromptSubmit = async () => {
   if (userPrompt.value.trim()) {
     try {
@@ -165,11 +186,13 @@ const handlePromptSubmit = async () => {
       submitButton.disabled = false;
     } catch (error) {
       console.error('请求失败:', error);
-      alert('请求失败，请稍后重试');
+      alert(`请求失败: ${error.message}`);
       // 恢复按钮状态
       const submitButton = document.querySelector('.input-actions button:last-child');
-      submitButton.textContent = '生成行程';
-      submitButton.disabled = false;
+      if (submitButton) {
+        submitButton.textContent = '生成行程';
+        submitButton.disabled = false;
+      }
     }
   } else {
     alert('请输入您的旅行需求')

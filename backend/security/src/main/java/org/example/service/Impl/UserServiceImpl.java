@@ -35,6 +35,7 @@ public class UserServiceImpl implements UserService {
         UserSecurityVO result = new UserSecurityVO();
         result.setUsername(existingUser.getUsername());
         result.setRole(existingUser.getRole());
+        result.setId(existingUser.getId());
         return result;
     }
 
@@ -55,6 +56,7 @@ public class UserServiceImpl implements UserService {
         UserSecurityVO result = new UserSecurityVO();
         result.setUsername(savedUser.getUsername());
         result.setRole(savedUser.getRole());
+        result.setId(savedUser.getId());
 
         return result;
     }
